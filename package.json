@@ -1,0 +1,11 @@
+{
+  "name": "json-contextify",
+  "version": "0.1.0",
+  "description": "JSON Contextify",
+  "main": "index.js",
+  "scripts": {
+    "test": "node ./test/"
+  },
+  "author": "",
+  "license": "ISC"
+}
