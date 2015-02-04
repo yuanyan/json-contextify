@@ -1,12 +1,17 @@
-module.exports = function processTemplate(raw){
+module.exports = function processTemplate(raw, style){
     return walk(raw, function(value) {
         // TODO: if processed vlaue is null or undefined, print warn
-        return getProperty(value, raw);
+        return getProperty(value, raw, style);
     });
 }
 
 // Config template Regexp.
-var propStringTmplRe = /{{\s*([a-z0-9_$]+(?:\.[a-z0-9_$]+)*)\s*}}/i;
+var styles = module.exports.styles = {
+    'mustache': /{{\s*([a-z0-9_$]+(?:\.[a-z0-9_$]+)*)\s*}}/i,
+    'es': /\${\s*([a-z0-9_$]+(?:\.[a-z0-9_$]+)*)\s*}/i,
+    'erb': /<%=\s*([a-z0-9_$]+(?:\.[a-z0-9_$]+)*)\s*%>/i
+};
+
 
 // Split strings on dot, but only if dot isn't preceded by a backslash. Since
 // JavaScript doesn't support lookbehinds, use a placeholder for "\.", split
@@ -74,7 +79,10 @@ function walk(value, fn, fnContinue) {
 };
 
 // Get config data, recursively processing templates.
-function getProperty(value, data) {
+function getProperty(value, data, style) {
+    style = style || 'mustache';
+    var propStringTmplRe = styles[style.toLowerCase()];
+
     // process string value
     if (typeof value == 'string') {
 
@@ -84,17 +92,23 @@ function getProperty(value, data) {
             var template = matches[0];
             // Get raw, unprocessed config data.
             var rawValue = namespace(data, propName);
-            var result = getProperty(rawValue, data);
+            var result = getProperty(rawValue, data, style);
 
-            if(typeof result == 'string')
-                return value.replace(template, result);
-            else
+            if(typeof result == 'string'){
+                var newValue = value.replace(template, result);
+                var newMatches = newValue.match(propStringTmplRe);
+                if (newMatches){
+                    return getProperty(newValue, data, style)
+                }else
+                    return newValue;
+            }else
                 return result;
         }
+
         // process array value
     } else if (Array.isArray(value)) {
         return value.map(function(val){
-            return getProperty(val, data)
+            return getProperty(val, data, style)
         });
     }
 
